@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugin de OFSC</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Paleta de colores basada en #069A9B */
+        :root {
+            --primary-color: #069A9B;
+            --primary-light: #40BFBF;
+            --primary-dark: #047C7D;
+            --secondary-color: #E0F7F7;
+            --border-color: #047C7D;
+            --text-color: #ffffff;
+        }
+
+        /* Estilo para los tabs */
+        .tabs {
+            display: flex;
+            cursor: pointer;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--primary-dark);
+            opacity: 0;
+            /* 🔹 Oculta los tabs inicialmente */
+            transition: opacity 0.3s ease-in-out;
+            /* 🔹 Suaviza la aparición */
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background-color: var(--primary-light);
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            color: white;
+        }
+
+        .tab.active {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Estilos para la tabla de configuración */
+        .config-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: var(--secondary-color);
+        }
+
+        .config-grid th,
+        .config-grid td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: left;
+        }
+
+        .config-grid th {
+            background-color: var(--primary-light);
+            font-weight: bold;
+            color: white;
+        }
+
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .button-group button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .button-group button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        /* Contenedor para hacer la tabla responsiva */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Ajustes en la tabla para evitar que se desborde */
+        #inventoryTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        /* Ajustar el contenido dentro de las celdas */
+        #inventoryTable th,
+        #inventoryTable td {
+            word-wrap: break-word;
+            white-space: normal;
+            text-align: left;
+            padding: 8px;
+            font-size: 14px;
+            overflow-wrap: break-word;
+        }
+
+        /* Ajustar columnas para pantallas pequeñas */
+        @media screen and (max-width: 768px) {
+
+            #inventoryTable th,
+            #inventoryTable td {
+                font-size: 14px;
+                padding: 6px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2></h2>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab" data-tab="validacion">Verificar fuentes y controles </div>
+            <div class="tab" data-tab="consulta">Reglas de compatibilidad</div>
+            <div class="tab" data-tab="administracion">Administrar Configuración</div>
+        </div>
+
+        <!-- Contenido de los Tabs -->
+        <div id="validacion" class="tab-content">
+            <!-- <div class="button-group">
+                <button id="validateBtn">Validar Inventario</button>
+            </div> -->
+            <div class="table-responsive">
+                <table class="config-grid" id="inventoryTable" border="1">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <!--<th>Tipo</th>-->
+                            <th>Equipo</th>
+                            <!--<th>Desc Equipo</th>-->
+                            <th>Fuente</th>
+                            <th>Control</th>
+                            <th>Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Filas dinámicas -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="statusMessage"></div>
+        </div>
+
+        <div id="consulta" class="tab-content">
+            <div class="button-group">
+                <button id="loadConfigBtn">Consultar</button>
+            </div>
+            <table class="config-grid" id="configTable">
+                <thead>
+                    <tr>
+                        <th>SKU Equipo</th>
+                        <th>Descripción</th>
+                        <th>SKU Fuente</th>
+                        <th>SKU Control</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filas dinámicas -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="administracion" class="tab-content">
+            <div class="button-group">
+                <input type="file" id="configFile" accept=".xlsx">
+                <button id="uploadConfigBtn">Actualizar desde Excel</button>
+            </div>
+            <div id="uploadStatusMessage"></div>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="reglasEFC.js"></script>
+    <script src="app.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('.tab-content').hide();
+            $('#validacion').show();
+
+            $('.tab').on('click', function () {
+                $('.tab').removeClass('active');
+                $(this).addClass('active');
+
+                $('.tab-content').hide();
+                $('#' + $(this).data('tab')).show();
+            });
+        });
+    </script>
+</body>
+
+</html>
