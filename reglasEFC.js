@@ -46,7 +46,7 @@ class ValidationManager {
 
     const { urlOFSC } = this.credentials;
 
-    console.log(urlOFSC);
+    // console.log(urlOFSC);
 
     try {
       const response = await fetch(
@@ -374,23 +374,19 @@ class ValidationManager {
       }
     }
 
-    const noNecesitaFuente =
-      applicableRule.fuentes.includes("0") ||
-      applicableRule.fuentes.includes("NA");
-    const noNecesitaControl =
-      applicableRule.controles.includes("0") ||
-      applicableRule.controles.includes("NA");
+    // const noNecesitaFuente = applicableRule.fuentes.includes("NA");
+    // const noNecesitaControl = applicableRule.controles.includes("NA");
 
-    if (noNecesitaFuente || noNecesitaControl) {
-      this.markAsUsed(equipment);
-      validatedItems.push({
-        equipo: equipment,
-        fuente: null,
-        control: null,
-        resultado: true,
-      });
-      return true;
-    }
+    // if (noNecesitaControl) {
+    //   this.markAsUsed(equipment);
+    //   // validatedItems.push({
+    //   //   equipo: equipment,
+    //   //   fuente: null,
+    //   //   control: null,
+    //   //   resultado: true,
+    //   // });
+    //   return true;
+    // }
 
     if (valida_e_fyoc_solos) {
       // **Intentar validación solo de fuentes**
@@ -427,7 +423,7 @@ class ValidationManager {
     // **Si no hay combinación válida y se indica en la llamada se marca error**
     if (registra_error) {
       this.errors.push(
-        `❌ Para el equipo con número de serie ${equipment.serialNumber} (SKU ${equipment.XI_EQUIPMENTTYPE}) no se detectó fuente y/o control`
+        `❌ Para el equipo con SKU ${equipment.XI_EQUIPMENTTYPE} (Serie ${equipment.serialNumber}) no se encontró una combinación válida de fuente y/o control según las reglas.`
       );
     }
 
@@ -476,7 +472,7 @@ class ValidationManager {
         if (!isValid) {
           // 🔹 Ajustado al nuevo formato (serie + SKU)
           this.errors.push(
-            `❌ Para el equipo con número de serie ${equipment.serialNumber} (SKU ${equipment.XI_EQUIPMENTTYPE}) le falta fuente y/o control`
+            `❌ Al equipo con SKU ${equipment.XI_EQUIPMENTTYPE} (Serie ${equipment.serialNumber}) le falta fuente y/o control compatible.`
           );
         }
       }
@@ -678,7 +674,7 @@ class ValidationManager {
                     this.equipmentDescriptionsCache[item.label] = item.translations.find(t => t.language === "es")?.name || item.translations.find(t => t.language === "en")?.name || item.label;
                 }
             });
-            console.log("Descripciones de equipos precargadas:", this.equipmentDescriptionsCache);
+            // console.log("Descripciones de equipos precargadas:", this.equipmentDescriptionsCache);
         }
     } catch (error) {
         console.error("Error al precargar descripciones de equipos:", error);
@@ -919,10 +915,10 @@ class ContoladorReglasEFC {
     let urlBaseMatch = fullUrl.match(/^https?:\/\/[^\/]+\.com\//);
     let urlBase = urlBaseMatch ? urlBaseMatch[0] : fullUrl;
 
-    if (!urlBase.includes("ofscCore")) {
-      urlBase = urlBase.replace(/\/$/, "");
-      this.flujoAprov = false;
-    }
+    // if (!urlBase.includes("ofscCore")) {
+    //   urlBase = urlBase.replace(/\/$/, "");
+    //   this.flujoAprov = false;
+    // }
 
     const credentialsValidador = {
       ofscRestClientId: receivedData.securedData.ofscRestClientId,
