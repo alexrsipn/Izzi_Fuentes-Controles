@@ -663,6 +663,34 @@ class ValidationManager {
     }
   }
 
+  async preloadEquipmentDescriptions() {
+    if (Object.keys(this.equipmentDescriptionsCache).length < 0) {
+        return;
+    }
+
+    console.log("Precargando descripciones de equipos...");
+    try {
+        const response = await this._fetchFromApi('properties/XI_EQUIPMENTTYPE/enumerationList');
+
+        if (response.items && Array.isArray(response.items)) {
+            response.items.forEach(item => {
+                if (item.label && item.translations && item.translations.length > 0) {
+                    this.equipmentDescriptionsCache[item.label] = item.translations.find(t => t.language === "es")?.name || item.translations.find(t => t.language === "en")?.name || item.label;
+                }
+            });
+            console.log("Descripciones de equipos precargadas:", this.equipmentDescriptionsCache);
+        }
+    } catch (error) {
+        console.error("Error al precargar descripciones de equipos:", error);
+    }
+  }
+
+  getDescriptionsFromCache (equipmentType) {
+    if (!equipmentType) return "Desconocido";
+
+    return this.equipmentDescriptionsCache[equipmentType] || "Desconocido";
+  }
+
   // Función para obtener la descripción de un equipmentType
   async consultarDescripcion(equipmentType) {
     // Diccionario para almacenar las descripciones en caché y evitar llamadas innecesarias
@@ -942,26 +970,28 @@ class ContoladorReglasEFC {
     tableBody.empty();
     console.log("Poblando tabla con datos de inventario:", inventoryData);
 
+    await this.validationManager.preloadEquipmentDescriptions();
+
     for (let index = 0; index < inventoryData.length; index++) {
       let item = inventoryData[index];
       let tipoElemento = item.equipo ? "Equipo" : "Fuente/Control";
       let identificador = "Desconocido";
-      let descripcion = "Desconocido";
+    //   let descripcion = "Desconocido";
 
       if (item.equipo) {
         identificador =
-          item.equipo.XI_EQUIPMENTTYPE + " - " + item.equipo.XI_EQUIPMAKE ||
+          item.equipo.XI_EQUIPMENTTYPE ||
           "Desconocido";
-        descripcion = await this.validationManager.consultarDescripcion(
-          item.equipo.XI_EQUIPMENTTYPE
-        );
+        // descripcion = await this.validationManager.consultarDescripcion(
+        //   item.equipo.XI_EQUIPMENTTYPE
+        // );
       } else if (item.fuente || item.control) {
         identificador = item.fuente
           ? item.fuente.XI_MATERIALTYPE
           : item.control.XI_MATERIALTYPE;
-        descripcion = await this.validationManager.consultarDescripcion(
-          identificador
-        );
+        // descripcion = await this.validationManager.consultarDescripcion(
+        //   identificador
+        // );
       }
 
       let fuentesAsociadas = item.fuente
@@ -976,11 +1006,14 @@ class ContoladorReglasEFC {
         : "-";
       let resultado = item.resultado ? "✅ Válido" : "Pendiente";
 
+      const tipoEquipoDesc = item.equipo ? item.equipo.XI_EQUIPMENTTYPE : identificador;
+      const descripcion = this.validationManager.getDescriptionsFromCache(tipoEquipoDesc);
+
       let row = "";
       if (item.equipo) {
         row = `<tr data-id="${item.equipo.inventoryId || "N/A"}">
                     <td>${index + 1}</td>
-                    <td>${identificador}</td>
+                    <td>${identificador} - ${descripcion}</td>
                     <td>${fuentesAsociadas}</td>
                     <td>${controlesAsociados}</td>
                     <td class="result">${resultado}</td>
