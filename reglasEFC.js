@@ -838,20 +838,21 @@ class ContoladorReglasEFC {
   }
 
   async mostrarModalErrores(valid, errors) {
-    let modalHtml = `
-            <div id="errorModal" class="modal">
-                <div class="modal-content">
-                    <h2>Resultados de Validación</h2>
-                    <table border="1">
+    const modalHtml = `
+            <div id="errorModal" style="position:fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;">
+                <div class="modal-content" style="background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 90%; border-radius: 10px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);">
+                    <h2 style="text-align: center; color: #333;">Resultados de validación sobre Equipo-Fuente-Control</h2>
+                    <div style="overflow-x: auto;>
+                    <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
                         <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Tipo</th>
-                                <th>Identificador</th>
-                                <th>Descripción</th>
-                                <th>Fuentes Asociadas</th>
-                                <th>Controles Asociados</th>
-                                <th>Resultado</th>
+                            <tr style="background-color: #069A9B; color: white">
+                                <th style="padding: 12px; text-align: left;">#</th>
+                                <th style="padding: 12px; text-align: left;">Tipo</th>
+                                <th style="padding: 12px; text-align: left;">Identificador</th>
+                                <th style="padding: 12px; text-align: left;">Descripción</th>
+                                <th style="padding: 12px; text-align: left;">Fuentes Asociadas</th>
+                                <th style="padding: 12px; text-align: left;">Controles Asociados</th>
+                                <th style="padding: 12px; text-align: left;">Resultado</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -859,28 +860,28 @@ class ContoladorReglasEFC {
                               .map(
                                 (item, index) => `
                                 <tr>
-                                    <td>${index + 1}</td>
-                                    <td>${
+                                    <td style="padding: 8px; border: 1px solid #ddd">${index + 1}</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd">${
                                       item.equipo ? "Equipo" : "Fuente/Control"
                                     }</td>
-                                    <td>${
+                                    <td style="padding: 8px; border: 1px solid #ddd">${
                                       item.equipo?.XI_EQUIPMENTTYPE ||
                                       item.fuente?.XI_MATERIALTYPE ||
                                       item.control?.XI_MATERIALTYPE ||
                                       "Desconocido"
                                     }</td>
-                                    <td>${item.descripcion || "N/A"}</td>
-                                    <td>${
+                                    <td style="padding: 8px; border: 1px solid #ddd">${item.descripcion || "N/A"}</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd">${
                                       item.fuente
                                         ? item.fuente.XI_MATERIALTYPE
                                         : "-"
                                     }</td>
-                                    <td>${
+                                    <td style="padding: 8px; border: 1px solid #ddd">${
                                       item.control
                                         ? item.control.XI_MATERIALTYPE
                                         : "-"
                                     }</td>
-                                    <td style="color:${
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color:${
                                       item.resultado ? "green" : "red"
                                     };">${
                                   item.resultado ? "✅ Válido" : "❌ Inválido"
@@ -891,11 +892,12 @@ class ContoladorReglasEFC {
                               .join("")}
                         </tbody>
                     </table>
-                    <h3 style="color:red;">Errores:</h3>
-                    <ul>
-                        ${errors.map((error) => `<li>${error}</li>`).join("")}
+                    </div>
+                    <h3 style="color: #D32F2F; margin-top: 20px;">Errores encontrados:</h3>
+                    <ul style="list-style-type: none; padding: 0; max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+                        ${errors.map((error) => `<li style="color: #D32F2F; margin-bottom: 8px">${error}</li>`).join("")}
                     </ul>
-                    <button id="cerrarModal">Cerrar</button>
+                    <button id="cerrarModal" style="background-color: #069A9B; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; display: block; margin: 20px auto 0 auto;">Cerrar</button>
                 </div>
             </div>
         `;
