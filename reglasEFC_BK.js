@@ -660,57 +660,28 @@ class ValidationManager {
   }
 
   async preloadEquipmentDescriptions() {
-    if (Object.keys(this.equipmentDescriptionsCache).length > 0) {
-      return;
+    if (Object.keys(this.equipmentDescriptionsCache).length < 0) {
+        return;
     }
 
-    // console.log("Precargando descripciones de equipos...");
-    // try {
-    //   const response = await this._fetchFromApi(
-    //     "properties/XI_EQUIPMENTTYPE/enumerationList"
-    //   );
+    console.log("Precargando descripciones de equipos...");
+    try {
+        const response = await this._fetchFromApi('properties/XI_EQUIPMENTTYPE/enumerationList');
 
-    //   if (response.items && Array.isArray(response.items)) {
-    //     response.items.forEach((item) => {
-    //       if (item.label && item.translations && item.translations.length > 0) {
-    //         this.equipmentDescriptionsCache[item.label] =
-    //           item.translations.find((t) => t.language === "es")?.name ||
-    //           item.translations.find((t) => t.language === "en")?.name ||
-    //           item.label;
-    //       }
-    //     });
-    //     console.log("Descripciones de equipos precargadas:", response);
-    //   }
-    // } catch (error) {
-    //   console.error("Error al precargar descripciones de equipos:", error);
-    // }
-    let offset = 0;
-    let hasMore = true;
-    const limit = 100;
-
-    while (hasMore) {
-      try {
-        const response = await this._fetchFromApi(`properties/XI_EQUIPMENTTYPE/enumerationList?limit=${limit}&offset=${offset}`);
         if (response.items && Array.isArray(response.items)) {
-          response.items.forEach((item) => {
-            if (item.label && item.translations && item.translations.length > 0) {
-              this.equipmentDescriptionsCache[item.label] = 
-                item.translations.find((t) => t.language === "es")?.name ||
-                item.translations.find((t) => t.language === "en")?.name ||
-                item.label;
-            }
-          });
+            response.items.forEach(item => {
+                if (item.label && item.translations && item.translations.length > 0) {
+                    this.equipmentDescriptionsCache[item.label] = item.translations.find(t => t.language === "es")?.name || item.translations.find(t => t.language === "en")?.name || item.label;
+                }
+            });
+            // console.log("Descripciones de equipos precargadas:", this.equipmentDescriptionsCache);
         }
-        hasMore = response.hasMore || false;
-        offset += limit;
-      } catch (error) {
+    } catch (error) {
         console.error("Error al precargar descripciones de equipos:", error);
-        hasMore = false;
     }
   }
-}
 
-  getDescriptionsFromCache(equipmentType) {
+  getDescriptionsFromCache (equipmentType) {
     if (!equipmentType) return "Desconocido";
 
     return this.equipmentDescriptionsCache[equipmentType] || "Desconocido";
@@ -889,9 +860,7 @@ class ContoladorReglasEFC {
                               .map(
                                 (item, index) => `
                                 <tr>
-                                    <td style="padding: 8px; border: 1px solid #ddd">${
-                                      index + 1
-                                    }</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd">${index + 1}</td>
                                     <td style="padding: 8px; border: 1px solid #ddd">${
                                       item.equipo ? "Equipo" : "Fuente/Control"
                                     }</td>
@@ -901,9 +870,7 @@ class ContoladorReglasEFC {
                                       item.control?.XI_MATERIALTYPE ||
                                       "Desconocido"
                                     }</td>
-                                    <td style="padding: 8px; border: 1px solid #ddd">${
-                                      item.descripcion || "N/A"
-                                    }</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd">${item.descripcion || "N/A"}</td>
                                     <td style="padding: 8px; border: 1px solid #ddd">${
                                       item.fuente
                                         ? item.fuente.XI_MATERIALTYPE
@@ -928,12 +895,7 @@ class ContoladorReglasEFC {
                     </div>
                     <h3 style="color: #D32F2F; margin-top: 20px;">Errores encontrados:</h3>
                     <ul style="list-style-type: none; padding: 0; max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
-                        ${errors
-                          .map(
-                            (error) =>
-                              `<li style="color: #D32F2F; margin-bottom: 8px">${error}</li>`
-                          )
-                          .join("")}
+                        ${errors.map((error) => `<li style="color: #D32F2F; margin-bottom: 8px">${error}</li>`).join("")}
                     </ul>
                     <button id="cerrarModal" style="background-color: #069A9B; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; display: block; margin: 20px auto 0 auto;">Cerrar</button>
                 </div>
@@ -970,8 +932,6 @@ class ContoladorReglasEFC {
     await this.validationManager.loadRulesConfig();
     this.validationManager.generateSapIdList();
 
-    await this.validationManager.preloadEquipmentDescriptions();
-
     this.installedInventories =
       await this.validationManager.fetchInstalledInventories(this.plugin.aid);
     this.customerInventories =
@@ -997,6 +957,7 @@ class ContoladorReglasEFC {
       this.installedInventories
     );
     console.log("Errores encontrados:", errores);
+    console.log("Resultados de validación completos:", validationResults);
     if (!this.flujoAprov) {
       this.populateInventoryTable(this.installedInventories, errores);
     }
@@ -1008,16 +969,18 @@ class ContoladorReglasEFC {
     tableBody.empty();
     console.log("Poblando tabla con datos de inventario:", inventoryData);
 
-    // await this.validationManager.preloadEquipmentDescriptions();
+    await this.validationManager.preloadEquipmentDescriptions();
 
     for (let index = 0; index < inventoryData.length; index++) {
       let item = inventoryData[index];
       let tipoElemento = item.equipo ? "Equipo" : "Fuente/Control";
       let identificador = "Desconocido";
-      //   let descripcion = "Desconocido";
+    //   let descripcion = "Desconocido";
 
       if (item.equipo) {
-        identificador = item.equipo.XI_EQUIPMENTTYPE || "Desconocido";
+        identificador =
+          item.equipo.XI_EQUIPMENTTYPE ||
+          "Desconocido";
         // descripcion = await this.validationManager.consultarDescripcion(
         //   item.equipo.XI_EQUIPMENTTYPE
         // );
@@ -1042,12 +1005,8 @@ class ContoladorReglasEFC {
         : "-";
       let resultado = item.resultado ? "✅ Válido" : "Pendiente";
 
-      const tipoEquipoDesc = item.equipo
-        ? item.equipo.XI_EQUIPMENTTYPE
-        : identificador;
-      const descripcion =
-        this.validationManager.getDescriptionsFromCache(tipoEquipoDesc);
-        console.log("Descripción obtenida:", descripcion);
+      const tipoEquipoDesc = item.equipo ? item.equipo.XI_EQUIPMENTTYPE : identificador;
+      const descripcion = this.validationManager.getDescriptionsFromCache(tipoEquipoDesc);
 
       let row = "";
       if (item.equipo) {
@@ -1093,5 +1052,6 @@ class ContoladorReglasEFC {
       }
       tableBody.append(msgRow);
     }
+    console.log("Tabla de inventario poblada.", this.equipmentDescriptionsCache);
   }
 }
