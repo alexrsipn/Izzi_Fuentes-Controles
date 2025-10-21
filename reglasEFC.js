@@ -113,12 +113,20 @@ class ValidationManager {
 
       // Extraer valores de los campos XI_EQUIPMENTTYPE (equipos) y XI_MATERIALTYPE (fuentes y controles)
       const allEquipmentTypes = this.rulesConfig.map((rule) => rule.skuequipo);
+      // const allMaterialTypes = [
+      //     ...this.rulesConfig.map(rule => rule.skufuente),
+      //     ...this.rulesConfig.map(rule => rule.skucontrol)
+      // ];
       const allMaterialTypes = this.rulesConfig.flatMap((rule) => [
         ...(rule.fuentes || []),
         ...(rule.controles || []),
       ]);
 
       // Filtrar y eliminar duplicados, excluyendo '*' y '0'
+      // this.sapIdList = [
+      //     ...new Set(allEquipmentTypes.filter(id => id !== '*' && id !== '0')),
+      //     ...new Set(allMaterialTypes.filter(id => id !== '*' && id !== '0'))
+      // ];
       this.sapIdList = [
         ...new Set(
           allEquipmentTypes.filter(
@@ -226,6 +234,7 @@ class ValidationManager {
     valida_e_fyoc_solos,
     validatedItems
   ) {
+    // let reglasAplicables = this.rulesConfig.filter(rule => rule.skuequipo === equipment.XI_EQUIPMENTTYPE);
     const applicableRule = this.rulesConfig.find(
       (rule) => rule.skuequipo === equipment.XI_EQUIPMENTTYPE
     );
@@ -235,6 +244,8 @@ class ValidationManager {
     }
 
     // **Conjuntos de fuentes y controles permitidos por todas las reglas del equipo**
+    // let fuentesValidas = new Set();
+    // let controlesValidos = new Set();
     let fuentesValidas = new Set(
       applicableRule.fuentes.filter((f) => f !== "0" && f !== "NA")
     );
@@ -242,9 +253,65 @@ class ValidationManager {
       applicableRule.controles.filter((c) => c !== "0" && c !== "NA")
     );
 
+    // reglasAplicables.forEach(rule => {
+    //     if (rule.skufuente !== '*') fuentesValidas.add(rule.skufuente);
+    //     if (rule.skucontrol !== '*' && rule.skucontrol !== '0') controlesValidos.add(rule.skucontrol);
+    // });
+
     // **Listar fuentes y controles disponibles**
     const availableSources = sources.filter((src) => !this.isUsed(src));
     const availableControls = controls.filter((ctrl) => !this.isUsed(ctrl));
+
+    // **Intentar validación exacta**
+    // for (const rule of reglasAplicables) {
+    //     // Encontrar la fuente y el control válidos según la regla
+    //     let validSource = rule.skufuente === '0' ? null : availableSources.find(src => src.XI_MATERIALTYPE === rule.skufuente);
+    //     // Si la regla es "0", no se necesita control
+    //     let validControl = rule.skucontrol === '0' ? null : availableControls.find(ctrl => ctrl.XI_MATERIALTYPE === rule.skucontrol);
+
+    //     if (validSource && validControl) {
+    //         this.markAsUsed(equipment);
+    //         this.markAsUsed(validSource, false, 'fuente');
+    //         this.markAsUsed(validControl, false, 'control');
+
+    //         // ✅ Guardar la combinación exitosa en un solo push
+    //         validatedItems.push({
+    //             equipo: equipment,
+    //             fuente: validSource,
+    //             control: validControl,
+    //             resultado: true
+    //         });
+
+    //         return true;
+    //     } else if (validSource && rule.skucontrol === '0') {
+    //         this.markAsUsed(equipment);
+    //         this.markAsUsed(validSource, false, 'fuente');
+
+    //         // ✅ Guardar la combinación equipo-fuente
+    //         validatedItems.push({
+    //             equipo: equipment,
+    //             fuente: validSource,
+    //             control: null,
+    //             resultado: true
+    //         });
+
+    //         return true;
+    //     } else if (validControl && rule.skufuente === '0') {
+    //         this.markAsUsed(equipment);
+    //         this.markAsUsed(validControl, false, 'control');
+
+    //         // ✅ Guardar la combinación equipo-control
+    //         validatedItems.push({
+    //             equipo: equipment,
+    //             fuente: null,
+    //             control: validControl,
+    //             resultado: true
+    //         });
+
+    //         return true;
+    //     }
+
+    // }
 
     // **Intentar validación combinada (Equipo + Fuente + Control)**
     for (const source of availableSources) {
@@ -306,6 +373,20 @@ class ValidationManager {
         }
       }
     }
+
+    // const noNecesitaFuente = applicableRule.fuentes.includes("NA");
+    // const noNecesitaControl = applicableRule.controles.includes("NA");
+
+    // if (noNecesitaControl) {
+    //   this.markAsUsed(equipment);
+    //   // validatedItems.push({
+    //   //   equipo: equipment,
+    //   //   fuente: null,
+    //   //   control: null,
+    //   //   resultado: true,
+    //   // });
+    //   return true;
+    // }
 
     if (valida_e_fyoc_solos) {
       // **Intentar validación solo de fuentes**
@@ -607,9 +688,9 @@ class ValidationManager {
         hasMore = false;
     }
   }
-}
+  }
 
-  getDescriptionsFromCache(equipmentType) {
+  getDescriptionsFromCache (equipmentType) {
     if (!equipmentType) return "Desconocido";
 
     return this.equipmentDescriptionsCache[equipmentType] || "Desconocido";
@@ -618,6 +699,7 @@ class ValidationManager {
   // Función para obtener la descripción de un equipmentType
   async consultarDescripcion(equipmentType) {
     // Diccionario para almacenar las descripciones en caché y evitar llamadas innecesarias
+    //let equipmentDescriptionsCache = {};
 
     if (!equipmentType) return "Desconocido";
 
@@ -765,21 +847,20 @@ class ContoladorReglasEFC {
   }
 
   async mostrarModalErrores(valid, errors) {
-    const modalHtml = `
-            <div id="errorModal" style="position:fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;">
-                <div class="modal-content" style="background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 90%; border-radius: 10px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);">
-                    <h2 style="text-align: center; color: #333;">Resultados de validación sobre Equipo-Fuente-Control</h2>
-                    <div style="overflow-x: auto;">
-                    <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+    let modalHtml = `
+            <div id="errorModal" class="modal">
+                <div class="modal-content">
+                    <h2>Resultados de Validación</h2>
+                    <table border="1">
                         <thead>
-                            <tr style="background-color: #069A9B; color: white">
-                                <th style="padding: 12px; text-align: left;">#</th>
-                                <th style="padding: 12px; text-align: left;">Tipo</th>
-                                <th style="padding: 12px; text-align: left;">Identificador</th>
-                                <th style="padding: 12px; text-align: left;">Descripción</th>
-                                <th style="padding: 12px; text-align: left;">Fuentes Asociadas</th>
-                                <th style="padding: 12px; text-align: left;">Controles Asociados</th>
-                                <th style="padding: 12px; text-align: left;">Resultado</th>
+                            <tr>
+                                <th>#</th>
+                                <th>Tipo</th>
+                                <th>Identificador</th>
+                                <th>Descripción</th>
+                                <th>Fuentes Asociadas</th>
+                                <th>Controles Asociados</th>
+                                <th>Resultado</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -787,32 +868,28 @@ class ContoladorReglasEFC {
                               .map(
                                 (item, index) => `
                                 <tr>
-                                    <td style="padding: 8px; border: 1px solid #ddd">${
-                                      index + 1
-                                    }</td>
-                                    <td style="padding: 8px; border: 1px solid #ddd">${
+                                    <td>${index + 1}</td>
+                                    <td>${
                                       item.equipo ? "Equipo" : "Fuente/Control"
                                     }</td>
-                                    <td style="padding: 8px; border: 1px solid #ddd">${
+                                    <td>${
                                       item.equipo?.XI_EQUIPMENTTYPE ||
                                       item.fuente?.XI_MATERIALTYPE ||
                                       item.control?.XI_MATERIALTYPE ||
                                       "Desconocido"
                                     }</td>
-                                    <td style="padding: 8px; border: 1px solid #ddd">${
-                                      item.descripcion || "N/A"
-                                    }</td>
-                                    <td style="padding: 8px; border: 1px solid #ddd">${
+                                    <td>${item.descripcion || "N/A"}</td>
+                                    <td>${
                                       item.fuente
                                         ? item.fuente.XI_MATERIALTYPE
                                         : "-"
                                     }</td>
-                                    <td style="padding: 8px; border: 1px solid #ddd">${
+                                    <td>${
                                       item.control
                                         ? item.control.XI_MATERIALTYPE
                                         : "-"
                                     }</td>
-                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color:${
+                                    <td style="color:${
                                       item.resultado ? "green" : "red"
                                     };">${
                                   item.resultado ? "✅ Válido" : "❌ Inválido"
@@ -823,17 +900,11 @@ class ContoladorReglasEFC {
                               .join("")}
                         </tbody>
                     </table>
-                    </div>
-                    <h3 style="color: #D32F2F; margin-top: 20px;">Errores encontrados:</h3>
-                    <ul style="list-style-type: none; padding: 0; max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
-                        ${errors
-                          .map(
-                            (error) =>
-                              `<li style="color: #D32F2F; margin-bottom: 8px">${error}</li>`
-                          )
-                          .join("")}
+                    <h3 style="color:red;">Errores:</h3>
+                    <ul>
+                        ${errors.map((error) => `<li>${error}</li>`).join("")}
                     </ul>
-                    <button id="cerrarModal" style="background-color: #069A9B; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; display: block; margin: 20px auto 0 auto;">Cerrar</button>
+                    <button id="cerrarModal">Cerrar</button>
                 </div>
             </div>
         `;
@@ -846,9 +917,17 @@ class ContoladorReglasEFC {
   }
 
   async validacEquiposFuenteControles(receivedData) {
+    // console.log(
+    //   "Iniciando validación de Equipos, Fuentes y Controles desde Mac"
+    // );
     let fullUrl = receivedData.securedData.urlOFSC;
     let urlBaseMatch = fullUrl.match(/^https?:\/\/[^\/]+\.com\//);
     let urlBase = urlBaseMatch ? urlBaseMatch[0] : fullUrl;
+
+    // if (!urlBase.includes("ofscCore")) {
+    //   urlBase = urlBase.replace(/\/$/, "");
+    //   this.flujoAprov = false;
+    // }
 
     const credentialsValidador = {
       ofscRestClientId: receivedData.securedData.ofscRestClientId,
@@ -898,20 +977,26 @@ class ContoladorReglasEFC {
     tableBody.empty();
     console.log("Poblando tabla con datos de inventario:", inventoryData);
 
-    // await this.validationManager.preloadEquipmentDescriptions();
-
     for (let index = 0; index < inventoryData.length; index++) {
       let item = inventoryData[index];
       let tipoElemento = item.equipo ? "Equipo" : "Fuente/Control";
       let identificador = "Desconocido";
-      //   let descripcion = "Desconocido";
+    //   let descripcion = "Desconocido";
 
       if (item.equipo) {
-        identificador = item.equipo.XI_EQUIPMENTTYPE || "Desconocido";
+        identificador =
+          item.equipo.XI_EQUIPMENTTYPE ||
+          "Desconocido";
+        // descripcion = await this.validationManager.consultarDescripcion(
+        //   item.equipo.XI_EQUIPMENTTYPE
+        // );
       } else if (item.fuente || item.control) {
         identificador = item.fuente
           ? item.fuente.XI_MATERIALTYPE
           : item.control.XI_MATERIALTYPE;
+        // descripcion = await this.validationManager.consultarDescripcion(
+        //   identificador
+        // );
       }
 
       let fuentesAsociadas = item.fuente
@@ -926,12 +1011,8 @@ class ContoladorReglasEFC {
         : "-";
       let resultado = item.resultado ? "✅ Válido" : "Pendiente";
 
-      const tipoEquipoDesc = item.equipo
-        ? item.equipo.XI_EQUIPMENTTYPE
-        : identificador;
-      const descripcion =
-        this.validationManager.getDescriptionsFromCache(tipoEquipoDesc);
-        console.log("Descripción obtenida:", descripcion);
+      const tipoEquipoDesc = item.equipo ? item.equipo.XI_EQUIPMENTTYPE : identificador;
+      const descripcion = this.validationManager.getDescriptionsFromCache(tipoEquipoDesc);
 
       let row = "";
       if (item.equipo) {

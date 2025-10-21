@@ -113,20 +113,12 @@ class ValidationManager {
 
       // Extraer valores de los campos XI_EQUIPMENTTYPE (equipos) y XI_MATERIALTYPE (fuentes y controles)
       const allEquipmentTypes = this.rulesConfig.map((rule) => rule.skuequipo);
-      // const allMaterialTypes = [
-      //     ...this.rulesConfig.map(rule => rule.skufuente),
-      //     ...this.rulesConfig.map(rule => rule.skucontrol)
-      // ];
       const allMaterialTypes = this.rulesConfig.flatMap((rule) => [
         ...(rule.fuentes || []),
         ...(rule.controles || []),
       ]);
 
       // Filtrar y eliminar duplicados, excluyendo '*' y '0'
-      // this.sapIdList = [
-      //     ...new Set(allEquipmentTypes.filter(id => id !== '*' && id !== '0')),
-      //     ...new Set(allMaterialTypes.filter(id => id !== '*' && id !== '0'))
-      // ];
       this.sapIdList = [
         ...new Set(
           allEquipmentTypes.filter(
@@ -234,7 +226,6 @@ class ValidationManager {
     valida_e_fyoc_solos,
     validatedItems
   ) {
-    // let reglasAplicables = this.rulesConfig.filter(rule => rule.skuequipo === equipment.XI_EQUIPMENTTYPE);
     const applicableRule = this.rulesConfig.find(
       (rule) => rule.skuequipo === equipment.XI_EQUIPMENTTYPE
     );
@@ -244,8 +235,6 @@ class ValidationManager {
     }
 
     // **Conjuntos de fuentes y controles permitidos por todas las reglas del equipo**
-    // let fuentesValidas = new Set();
-    // let controlesValidos = new Set();
     let fuentesValidas = new Set(
       applicableRule.fuentes.filter((f) => f !== "0" && f !== "NA")
     );
@@ -253,65 +242,9 @@ class ValidationManager {
       applicableRule.controles.filter((c) => c !== "0" && c !== "NA")
     );
 
-    // reglasAplicables.forEach(rule => {
-    //     if (rule.skufuente !== '*') fuentesValidas.add(rule.skufuente);
-    //     if (rule.skucontrol !== '*' && rule.skucontrol !== '0') controlesValidos.add(rule.skucontrol);
-    // });
-
     // **Listar fuentes y controles disponibles**
     const availableSources = sources.filter((src) => !this.isUsed(src));
     const availableControls = controls.filter((ctrl) => !this.isUsed(ctrl));
-
-    // **Intentar validación exacta**
-    // for (const rule of reglasAplicables) {
-    //     // Encontrar la fuente y el control válidos según la regla
-    //     let validSource = rule.skufuente === '0' ? null : availableSources.find(src => src.XI_MATERIALTYPE === rule.skufuente);
-    //     // Si la regla es "0", no se necesita control
-    //     let validControl = rule.skucontrol === '0' ? null : availableControls.find(ctrl => ctrl.XI_MATERIALTYPE === rule.skucontrol);
-
-    //     if (validSource && validControl) {
-    //         this.markAsUsed(equipment);
-    //         this.markAsUsed(validSource, false, 'fuente');
-    //         this.markAsUsed(validControl, false, 'control');
-
-    //         // ✅ Guardar la combinación exitosa en un solo push
-    //         validatedItems.push({
-    //             equipo: equipment,
-    //             fuente: validSource,
-    //             control: validControl,
-    //             resultado: true
-    //         });
-
-    //         return true;
-    //     } else if (validSource && rule.skucontrol === '0') {
-    //         this.markAsUsed(equipment);
-    //         this.markAsUsed(validSource, false, 'fuente');
-
-    //         // ✅ Guardar la combinación equipo-fuente
-    //         validatedItems.push({
-    //             equipo: equipment,
-    //             fuente: validSource,
-    //             control: null,
-    //             resultado: true
-    //         });
-
-    //         return true;
-    //     } else if (validControl && rule.skufuente === '0') {
-    //         this.markAsUsed(equipment);
-    //         this.markAsUsed(validControl, false, 'control');
-
-    //         // ✅ Guardar la combinación equipo-control
-    //         validatedItems.push({
-    //             equipo: equipment,
-    //             fuente: null,
-    //             control: validControl,
-    //             resultado: true
-    //         });
-
-    //         return true;
-    //     }
-
-    // }
 
     // **Intentar validación combinada (Equipo + Fuente + Control)**
     for (const source of availableSources) {
@@ -373,20 +306,6 @@ class ValidationManager {
         }
       }
     }
-
-    // const noNecesitaFuente = applicableRule.fuentes.includes("NA");
-    // const noNecesitaControl = applicableRule.controles.includes("NA");
-
-    // if (noNecesitaControl) {
-    //   this.markAsUsed(equipment);
-    //   // validatedItems.push({
-    //   //   equipo: equipment,
-    //   //   fuente: null,
-    //   //   control: null,
-    //   //   resultado: true,
-    //   // });
-    //   return true;
-    // }
 
     if (valida_e_fyoc_solos) {
       // **Intentar validación solo de fuentes**
@@ -660,28 +579,37 @@ class ValidationManager {
   }
 
   async preloadEquipmentDescriptions() {
-    if (Object.keys(this.equipmentDescriptionsCache).length < 0) {
-        return;
+    if (Object.keys(this.equipmentDescriptionsCache).length > 0) {
+      return;
     }
 
-    console.log("Precargando descripciones de equipos...");
-    try {
-        const response = await this._fetchFromApi('properties/XI_EQUIPMENTTYPE/enumerationList');
+    let offset = 0;
+    let hasMore = true;
+    const limit = 100;
 
+    while (hasMore) {
+      try {
+        const response = await this._fetchFromApi(`properties/XI_EQUIPMENTTYPE/enumerationList?limit=${limit}&offset=${offset}`);
         if (response.items && Array.isArray(response.items)) {
-            response.items.forEach(item => {
-                if (item.label && item.translations && item.translations.length > 0) {
-                    this.equipmentDescriptionsCache[item.label] = item.translations.find(t => t.language === "es")?.name || item.translations.find(t => t.language === "en")?.name || item.label;
-                }
-            });
-            // console.log("Descripciones de equipos precargadas:", this.equipmentDescriptionsCache);
+          response.items.forEach((item) => {
+            if (item.label && item.translations && item.translations.length > 0) {
+              this.equipmentDescriptionsCache[item.label] = 
+                item.translations.find((t) => t.language === "es")?.name ||
+                item.translations.find((t) => t.language === "en")?.name ||
+                item.label;
+            }
+          });
         }
-    } catch (error) {
+        hasMore = response.hasMore || false;
+        offset += limit;
+      } catch (error) {
         console.error("Error al precargar descripciones de equipos:", error);
+        hasMore = false;
     }
   }
+}
 
-  getDescriptionsFromCache (equipmentType) {
+  getDescriptionsFromCache(equipmentType) {
     if (!equipmentType) return "Desconocido";
 
     return this.equipmentDescriptionsCache[equipmentType] || "Desconocido";
@@ -690,7 +618,6 @@ class ValidationManager {
   // Función para obtener la descripción de un equipmentType
   async consultarDescripcion(equipmentType) {
     // Diccionario para almacenar las descripciones en caché y evitar llamadas innecesarias
-    //let equipmentDescriptionsCache = {};
 
     if (!equipmentType) return "Desconocido";
 
@@ -860,7 +787,9 @@ class ContoladorReglasEFC {
                               .map(
                                 (item, index) => `
                                 <tr>
-                                    <td style="padding: 8px; border: 1px solid #ddd">${index + 1}</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd">${
+                                      index + 1
+                                    }</td>
                                     <td style="padding: 8px; border: 1px solid #ddd">${
                                       item.equipo ? "Equipo" : "Fuente/Control"
                                     }</td>
@@ -870,7 +799,9 @@ class ContoladorReglasEFC {
                                       item.control?.XI_MATERIALTYPE ||
                                       "Desconocido"
                                     }</td>
-                                    <td style="padding: 8px; border: 1px solid #ddd">${item.descripcion || "N/A"}</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd">${
+                                      item.descripcion || "N/A"
+                                    }</td>
                                     <td style="padding: 8px; border: 1px solid #ddd">${
                                       item.fuente
                                         ? item.fuente.XI_MATERIALTYPE
@@ -895,7 +826,12 @@ class ContoladorReglasEFC {
                     </div>
                     <h3 style="color: #D32F2F; margin-top: 20px;">Errores encontrados:</h3>
                     <ul style="list-style-type: none; padding: 0; max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
-                        ${errors.map((error) => `<li style="color: #D32F2F; margin-bottom: 8px">${error}</li>`).join("")}
+                        ${errors
+                          .map(
+                            (error) =>
+                              `<li style="color: #D32F2F; margin-bottom: 8px">${error}</li>`
+                          )
+                          .join("")}
                     </ul>
                     <button id="cerrarModal" style="background-color: #069A9B; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; display: block; margin: 20px auto 0 auto;">Cerrar</button>
                 </div>
@@ -910,17 +846,9 @@ class ContoladorReglasEFC {
   }
 
   async validacEquiposFuenteControles(receivedData) {
-    // console.log(
-    //   "Iniciando validación de Equipos, Fuentes y Controles desde Mac"
-    // );
     let fullUrl = receivedData.securedData.urlOFSC;
     let urlBaseMatch = fullUrl.match(/^https?:\/\/[^\/]+\.com\//);
     let urlBase = urlBaseMatch ? urlBaseMatch[0] : fullUrl;
-
-    // if (!urlBase.includes("ofscCore")) {
-    //   urlBase = urlBase.replace(/\/$/, "");
-    //   this.flujoAprov = false;
-    // }
 
     const credentialsValidador = {
       ofscRestClientId: receivedData.securedData.ofscRestClientId,
@@ -931,6 +859,8 @@ class ContoladorReglasEFC {
     this.validationManager.setCredentials(credentialsValidador);
     await this.validationManager.loadRulesConfig();
     this.validationManager.generateSapIdList();
+
+    await this.validationManager.preloadEquipmentDescriptions();
 
     this.installedInventories =
       await this.validationManager.fetchInstalledInventories(this.plugin.aid);
@@ -957,7 +887,6 @@ class ContoladorReglasEFC {
       this.installedInventories
     );
     console.log("Errores encontrados:", errores);
-    console.log("Resultados de validación completos:", validationResults);
     if (!this.flujoAprov) {
       this.populateInventoryTable(this.installedInventories, errores);
     }
@@ -969,28 +898,20 @@ class ContoladorReglasEFC {
     tableBody.empty();
     console.log("Poblando tabla con datos de inventario:", inventoryData);
 
-    await this.validationManager.preloadEquipmentDescriptions();
+    // await this.validationManager.preloadEquipmentDescriptions();
 
     for (let index = 0; index < inventoryData.length; index++) {
       let item = inventoryData[index];
       let tipoElemento = item.equipo ? "Equipo" : "Fuente/Control";
       let identificador = "Desconocido";
-    //   let descripcion = "Desconocido";
+      //   let descripcion = "Desconocido";
 
       if (item.equipo) {
-        identificador =
-          item.equipo.XI_EQUIPMENTTYPE ||
-          "Desconocido";
-        // descripcion = await this.validationManager.consultarDescripcion(
-        //   item.equipo.XI_EQUIPMENTTYPE
-        // );
+        identificador = item.equipo.XI_EQUIPMENTTYPE || "Desconocido";
       } else if (item.fuente || item.control) {
         identificador = item.fuente
           ? item.fuente.XI_MATERIALTYPE
           : item.control.XI_MATERIALTYPE;
-        // descripcion = await this.validationManager.consultarDescripcion(
-        //   identificador
-        // );
       }
 
       let fuentesAsociadas = item.fuente
@@ -1005,8 +926,12 @@ class ContoladorReglasEFC {
         : "-";
       let resultado = item.resultado ? "✅ Válido" : "Pendiente";
 
-      const tipoEquipoDesc = item.equipo ? item.equipo.XI_EQUIPMENTTYPE : identificador;
-      const descripcion = this.validationManager.getDescriptionsFromCache(tipoEquipoDesc);
+      const tipoEquipoDesc = item.equipo
+        ? item.equipo.XI_EQUIPMENTTYPE
+        : identificador;
+      const descripcion =
+        this.validationManager.getDescriptionsFromCache(tipoEquipoDesc);
+        console.log("Descripción obtenida:", descripcion);
 
       let row = "";
       if (item.equipo) {
@@ -1052,6 +977,5 @@ class ContoladorReglasEFC {
       }
       tableBody.append(msgRow);
     }
-    console.log("Tabla de inventario poblada.", this.equipmentDescriptionsCache);
   }
 }
